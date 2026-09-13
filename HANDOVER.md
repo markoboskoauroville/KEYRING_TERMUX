@@ -78,3 +78,15 @@ settings gear there uses this app's probes) and three new manifest modules.
 - OpenAI / OpenRouter / ElevenLabs probes against a real key, the day one is in the vault.
 - A Spotify pair from two blocks (the note keeps the id and the secret in separate blocks): the
   parser pairs only inside one block; the two arrive as two entries and are paired by hand.
+
+## 13.9.2026, the afternoon: the live port registry, and Chrome
+
+- **`portpick.announce("keyring", LIVE_PORT)`** right after `pick()`: the port actually bound is written
+  to `~/.mantra/ports/keyring` (0600) and removed at exit, so the launcher (mamc) opens the page where
+  the app IS, not where its source says it would like to be (ports.md §3). A line left by a kill is
+  ignored by the reader unless the port answers. The tests cover announce, forget and registered.
+- **The page opens in Chrome**, whatever the default browser: `termux-open-url URL com.android.chrome`
+  after a cached `pm list packages` check, bounded by `timeout -k 5 30` (termux-app.md §5). Marko's
+  rule of the day for every app on the phone.
+- portpick.py and the opener were pulled level with the source in MAHA_TRANSCRIBE_TERMUX_TERMINAL
+  (the TIME_WAIT fix and the timeout bound had lived only in copies). Version 2.

@@ -6,6 +6,7 @@ a new number. Bumped by hand on every commit that touches this app. Kept in its 
 selfupdate.py can read it off origin/main without importing app.py.
 
 v1: 13.9.2026, the first keyring.
+v2 (13.9.2026): the live port registry (portpick.announce, ports.md §3); the page opens in Chrome, bounded.
 """
 
-APP_VERSION = 1
+APP_VERSION = 2

@@ -274,6 +274,7 @@ if __name__ == "__main__":
         except ValueError:
             print("ignoring invalid port argument %r, using %d" % (sys.argv[1], DEFAULT_PORT))
     LIVE_PORT, note = portpick.pick("127.0.0.1", requested)
+    portpick.announce("keyring", LIVE_PORT)      # ~/.mantra/ports, for the launcher (ports.md §3)
     ring.ensure_vault()
     action = term.run(app, "127.0.0.1", LIVE_PORT, snapshot=console_snapshot, note=note,
                       on_check_update=selfupdate.check_remote, on_perform_update=selfupdate.perform_update)

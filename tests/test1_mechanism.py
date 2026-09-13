@@ -180,6 +180,29 @@ except AssertionError as e:
 except ImportError:
     print("  skip  hypothesis not installed")
 
+
+print("portpick's live registry (ports.md §3): announce writes, forget removes, registered reads")
+import portpick  # noqa: E402
+import tempfile as _tf
+_reg_saved = portpick.REGISTRY
+_reg = _tf.mkdtemp(prefix="ports-")
+portpick.REGISTRY = _reg
+try:
+    path = portpick.announce("keyring", 8850)
+    check("announce writes ~/.mantra/ports/<command>", path == os.path.join(_reg, "keyring") and open(path).read().strip() == "8850")
+    check("the file is 0600", oct(os.stat(path).st_mode & 0o777) == "0o600")
+    check("registered reads it back", portpick.registered("keyring") == 8850)
+    check("forget with another copy's port leaves it", portpick.forget("keyring", 8851) is False and os.path.exists(path))
+    check("forget with our port removes it", portpick.forget("keyring", 8850) is True and not os.path.exists(path))
+    check("registered of nothing is None", portpick.registered("keyring") is None)
+    check("a bad port is not announced", portpick.announce("keyring", 0) is None and portpick.announce("keyring", "x") is None)
+    check("a command with a slash is refused", portpick.announce("../x", 8850) is None)
+    portpick.REGISTRY = os.path.join(_reg, "a-file"); open(portpick.REGISTRY, "w").write("x")
+    check("a registry that cannot be written does not raise", portpick.announce("keyring", 8850) is None)
+finally:
+    portpick.REGISTRY = _reg_saved
+    import shutil as _sh; _sh.rmtree(_reg, ignore_errors=True)
+
 print()
 print("test1_mechanism: %d checks, %d failed" % (count, len(fails)))
 for f in fails:

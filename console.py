@@ -60,15 +60,46 @@ def say(line=""):
     print(line, flush=True)
 
 
-def open_page(port):
-    url = f"http://127.0.0.1:{port}"
-    for cmd in (["termux-open-url", url], ["open", url], ["xdg-open", url]):
-        if shutil.which(cmd[0]):
-            try:
-                subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                return True
-            except Exception:
-                pass
+CHROME = "com.android.chrome"
+_HAS_PKG = {}
+
+
+def has_package(pkg):
+    """Is an Android package installed? `pm list packages` answers from Termux's shell and from
+    inside the PRoot (termux-proot-working.md §3). Cached: a second per call, and the answer does
+    not change while the app runs."""
+    if pkg not in _HAS_PKG:
+        try:
+            r = subprocess.run(["pm", "list", "packages", pkg], capture_output=True, text=True, timeout=10)
+            _HAS_PKG[pkg] = ("package:" + pkg) in r.stdout.split()
+        except Exception:
+            _HAS_PKG[pkg] = False
+    return _HAS_PKG[pkg]
+
+
+def open_page(target):
+    """Chrome, whatever the phone's default browser is (Marko, 13.9.2026): termux-open-url takes an
+    app package as its second argument. Without Chrome, the default browser; on a Mac, open; on
+    Linux, xdg-open. Bounded by timeout(1): a Termux:API call that waits on an app that never
+    answers is an orphan Android counts against the phantom-process limit (termux-proot-working.md
+    §3). `target` is a port or a whole URL. Returns True when something was started."""
+    url = target if str(target).startswith("http") else f"http://127.0.0.1:{target}"
+    chain = []
+    if shutil.which("termux-open-url"):
+        if has_package(CHROME):
+            chain.append(["termux-open-url", url, CHROME])
+        chain.append(["termux-open-url", url])
+    for other in ("open", "xdg-open"):
+        if shutil.which(other):
+            chain.append([other, url])
+    for cmd in chain:
+        if shutil.which("timeout"):
+            cmd = ["timeout", "-k", "5", "30"] + cmd
+        try:
+            subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            return True
+        except Exception:
+            continue
     return False
 
 
