@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Keyring</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<style>
+  :root {
+    /* AGY UI tokens, the same as every page here (maha_transcribe.html) */
+    --bg: #0b0d10; --surface: #0d1117; --surface-2: #141a21; --line: #23303d;
+    --amber: #f59e0b; --amber-hi: #fbbf24; --amber-lo: #b45309;
+    --prose: #f2ddb4; --dim: #8a7a5c; --red: #ef4444; --green: #22c55e;
+    --mono: ui-monospace, "JetBrains Mono", "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  *:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--prose); font-family: var(--mono); min-height: 100vh; }
+  body { display: flex; justify-content: center; align-items: flex-start; padding: calc(12px + env(safe-area-inset-top)) 8px calc(14px + env(safe-area-inset-bottom)); }
+  .unit { width: 100%; max-width: 720px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+  h1 { font-size: 18px; letter-spacing: 0.12em; margin: 0; font-weight: 700; }
+  h1 span { color: var(--amber); }
+  .tag { font-size: 11px; color: var(--dim); letter-spacing: 0.06em; text-align: right; }
+  h2 { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); margin: 14px 0 6px; font-weight: 700; }
+  /* nothing appears, nothing disappears: dimmed things keep their place */
+  .off { opacity: 0.45; pointer-events: none; }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 6px; }
+  .row > * { min-width: 0; }
+  button, .btn { background: var(--surface-2); border: 1px solid var(--line); color: var(--prose); font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; padding: 11px 14px; border-radius: 999px; cursor: pointer; }
+  button:hover, .btn:hover { border-color: var(--amber); }
+  button.act { background: var(--amber); border-color: var(--amber); color: var(--bg); font-weight: 700; }
+  button.danger:hover { border-color: var(--red); color: var(--red); }
+  button.small { padding: 7px 10px; font-size: 11px; }
+  input[type=text], textarea { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; color: var(--prose); font-family: var(--mono); font-size: 12px; padding: 10px; width: 100%; }
+  textarea { min-height: 84px; resize: vertical; }
+  input[type=file] { display: none; }
+  .pick { display: inline-block; border: 1px solid var(--amber); border-radius: 999px; padding: 11px 14px; color: var(--amber); font-weight: 700; letter-spacing: 0.05em; font-size: 12px; cursor: pointer; background: rgba(245,158,11,0.08); }
+  .pick:hover { background: rgba(245,158,11,0.16); }
+  .status { font-size: 12px; color: var(--dim); min-height: 34px; line-height: 1.5; margin: 4px 0 6px; white-space: pre-wrap; }
+  .status.err { color: var(--red); }
+  .status.ok { color: var(--green); }
+  .pills { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+  .pill { background: var(--surface-2); border: 1px solid var(--line); color: var(--dim); font-size: 11px; padding: 7px 11px; border-radius: 999px; cursor: pointer; letter-spacing: 0.03em; }
+  .pill.on { color: var(--bg); background: var(--amber); border-color: var(--amber); font-weight: 700; }
+  .pill b { font-weight: 700; }
+  /* the list: one row per key, every row carries its provider's glyph */
+  .key { display: grid; grid-template-columns: 24px 34px 1fr auto; gap: 8px; align-items: center; padding: 9px 6px; border-top: 1px solid var(--line); }
+  .key:first-child { border-top: none; }
+  .key .g { width: 34px; height: 34px; border-radius: 9px; border: 1.5px solid var(--prose); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--prose); }
+  .key .who { min-width: 0; }
+  .key .name { font-size: 13px; font-weight: 700; overflow-wrap: anywhere; }
+  .key .name small { color: var(--dim); font-weight: 400; }
+  .key .val { font-size: 12px; color: var(--dim); overflow-wrap: anywhere; }
+  .key .det { font-size: 11px; color: var(--dim); overflow-wrap: anywhere; margin-top: 2px; }
+  .state { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+  .s-untested { color: var(--dim); border-color: var(--line); }
+  .s-works { color: var(--bg); background: var(--green); }
+  .s-valid { color: var(--prose); border-color: var(--prose); }
+  .s-nocredit { color: var(--bg); background: var(--amber); }
+  .s-rejected { color: var(--bg); background: var(--red); }
+  .s-throttled { color: var(--green); border-color: var(--green); }
+  .s-unclear { color: var(--dim); border-color: var(--dim); }
+  .key .acts { grid-column: 2 / 5; display: flex; gap: 6px; flex-wrap: wrap; }
+  .key input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--amber); }
+  .key.busy .g { border-color: var(--amber); color: var(--amber); }
+  .edit { grid-column: 2 / 5; display: flex; gap: 6px; flex-wrap: wrap; }
+  .edit select { background: var(--surface-2); color: var(--prose); border: 1px solid var(--line); border-radius: 10px; font-family: var(--mono); font-size: 12px; padding: 9px; }
+  .log { font-size: 11px; color: var(--dim); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 180px; overflow: auto; background: var(--surface-2); border-radius: 10px; padding: 8px; }
+  .fmt { font-size: 11px; color: var(--dim); background: var(--surface-2); border-radius: 10px; padding: 8px; white-space: pre; overflow-x: auto; }
+  .bar { position: sticky; bottom: 0; background: var(--surface); padding: 8px 0 0; border-top: 1px solid var(--line); margin-top: 8px; }
+  .count { font-size: 12px; color: var(--dim); }
+</style>
+</head>
+<body>
+<div class="unit">
+  <header>
+    <h1><span>KEY</span>RING</h1>
+    <div class="tag">v{{VERSION}} · <span id="hdrCount">0 keys</span><br>127.0.0.1 only · the vault is ~/.keyring</div>
+  </header>
+
+  <h2>1 · bring keys in</h2>
+  <div class="row">
+    <label class="pick" for="fileIn">choose a key file …</label>
+    <input type="file" id="fileIn" multiple accept=".txt,.md,.keys,.json,.toml,.env,text/plain">
+    <span id="fileName" class="count">any note with keys in it, or a keyring v1 file</span>
+  </div>
+  <div class="row">
+    <input type="text" id="folderIn" value="~/storage/downloads/Api" aria-label="a folder of key notes on this phone">
+    <button id="folderBtn">import the folder</button>
+  </div>
+  <div class="row">
+    <textarea id="pasteIn" placeholder="or paste a note here: the keys are found by shape, the rest is left alone" aria-label="paste a note"></textarea>
+  </div>
+  <div class="row">
+    <button id="pasteBtn" class="off">import the pasted note</button>
+  </div>
+  <div id="status" class="status">nothing imported this session</div>
+
+  <h2>2 · the keys</h2>
+  <div class="pills" id="provPills"></div>
+  <div class="pills" id="statePills"></div>
+  <div class="row">
+    <button id="selAll" class="small">select all shown</button>
+    <button id="selNone" class="small">select none</button>
+    <span class="count" id="selCount">0 selected</span>
+  </div>
+  <div id="list"></div>
+
+  <div class="bar">
+    <div class="row">
+      <button id="testSel" class="act off">test selected</button>
+      <button id="exportSel" class="off">export selected</button>
+      <button id="exportAll">export all</button>
+      <button id="delSel" class="danger off">delete selected</button>
+    </div>
+  </div>
+
+  <h2>3 · the standard file, keyring v1</h2>
+  <div class="fmt"># keyring v1
+# exported 2026-09-13 10:42, 2 entries
+
+provider: groq
+label: main account
+key: gsk_…
+
+provider: hume
+label: kalabhumi
+key: …
+secret: …</div>
+
+  <h2>4 · what happened</h2>
+  <div class="log" id="log">nothing yet</div>
+</div>
+
+<script>
+/* the page talks to its own server only, with the header a cross-site request cannot set */
+const H = { "X-Keyring-Local": "1", "Content-Type": "application/json" };
+const $ = id => document.getElementById(id);
+let KEYS = [], PROVIDERS = {}, STATES = [];
+let provFilter = "all", stateFilter = "all";
+const selected = new Set();
+const editing = new Set();
+const GLYPH = { anthropic: "A", openai: "O", openrouter: "R", groq: "G", gemini: "✦", google: "g", speechify: "S", elevenlabs: "E", hume: "H", assemblyai: "a", spotify: "♫", github: "#", cloudflare: "☁", huggingface: "🤗", unknown: "?" };
+const STATE_CLS = { "untested": "s-untested", "works": "s-works", "valid": "s-valid", "no credit": "s-nocredit", "rejected": "s-rejected", "throttled": "s-throttled", "unclear": "s-unclear" };
+
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function say(msg, cls) { const s = $("status"); s.textContent = msg; s.className = "status" + (cls ? " " + cls : ""); }
+async function api(path, opts) {
+  const r = await fetch(path, Object.assign({ headers: H }, opts || {}));
+  const j = await r.json().catch(() => ({ ok: false, error: "no answer" }));
+  if (!r.ok || j.ok === false) throw new Error(j.error || ("HTTP " + r.status));
+  return j;
+}
+
+async function load() {
+  const j = await api("/api/keys");
+  KEYS = j.keys; PROVIDERS = j.providers; STATES = j.states;
+  for (const id of [...selected]) if (!KEYS.some(k => k.id === id)) selected.delete(id);
+  render(); loadLog();
+}
+function shown() {
+  return KEYS.filter(k => (provFilter === "all" || k.provider === provFilter) && (stateFilter === "all" || k.state === stateFilter));
+}
+function render() {
+  $("hdrCount").textContent = KEYS.length + " key" + (KEYS.length === 1 ? "" : "s");
+  // the provider pills: every provider that has a key, with its count; "all" first
+  const pc = {}; for (const k of KEYS) pc[k.provider] = (pc[k.provider] || 0) + 1;
+  const provs = Object.keys(pc).sort();
+  $("provPills").innerHTML = ['<span class="pill' + (provFilter === "all" ? " on" : "") + '" data-p="all">all <b>' + KEYS.length + '</b></span>']
+    .concat(provs.map(p => '<span class="pill' + (provFilter === p ? " on" : "") + '" data-p="' + esc(p) + '">' + esc(p) + ' <b>' + pc[p] + '</b></span>')).join("");
+  const sc = {}; for (const k of KEYS) sc[k.state] = (sc[k.state] || 0) + 1;
+  $("statePills").innerHTML = ['<span class="pill' + (stateFilter === "all" ? " on" : "") + '" data-s="all">any state</span>']
+    .concat(STATES.filter(s => sc[s]).map(s => '<span class="pill' + (stateFilter === s ? " on" : "") + '" data-s="' + esc(s) + '">' + esc(s) + ' <b>' + sc[s] + '</b></span>')).join("");
+  const list = shown();
+  $("list").innerHTML = list.length ? list.map(rowHtml).join("") : '<div class="count" style="padding:12px 6px">no keys here yet</div>';
+  const n = selected.size;
+  $("selCount").textContent = n + " selected";
+  for (const id of ["testSel", "exportSel", "delSel"]) $(id).classList.toggle("off", n === 0);
+  $("exportAll").classList.toggle("off", KEYS.length === 0);
+}
+function rowHtml(k) {
+  const when = k.state_at ? " · " + k.state_at.replace("T", " ").slice(0, 16) : "";
+  const isEdit = editing.has(k.id);
+  return '<div class="key" data-id="' + k.id + '">' +
+    '<input type="checkbox" data-act="sel"' + (selected.has(k.id) ? " checked" : "") + ' aria-label="select">' +
+    '<div class="g" title="' + esc(k.name) + '">' + esc(GLYPH[k.provider] || "?") + '</div>' +
+    '<div class="who"><div class="name">' + esc(k.label || k.name) + ' <small>' + esc(k.provider) + (k.has_secret ? " · pair" : "") + '</small></div>' +
+      '<div class="val">' + esc(k.masked) + (k.source ? ' <small>· from ' + esc(k.source) + '</small>' : '') + '</div>' +
+      (k.detail ? '<div class="det">' + esc(k.detail) + esc(when) + '</div>' : '') + '</div>' +
+    '<span class="state ' + (STATE_CLS[k.state] || "s-unclear") + '">' + esc(k.state) + '</span>' +
+    '<div class="acts">' +
+      '<button class="small act" data-act="test">test</button>' +
+      '<button class="small" data-act="copy">copy</button>' +
+      (k.has_secret ? '<button class="small" data-act="copysecret">copy secret</button>' : '') +
+      '<button class="small" data-act="export">export</button>' +
+      '<button class="small" data-act="edit">' + (isEdit ? 'close' : 'edit') + '</button>' +
+      (k.state === "rejected" || k.state === "no credit" ? '<button class="small" data-act="revive">revive</button>' : '') +
+      '<button class="small danger" data-act="del">delete</button>' +
+    '</div>' +
+    (isEdit ? '<div class="edit"><input type="text" data-f="label" value="' + esc(k.label) + '" placeholder="label" aria-label="label" style="flex:1 1 160px">' +
+      '<select data-f="provider" aria-label="provider">' + Object.keys(PROVIDERS).map(p => '<option value="' + p + '"' + (p === k.provider ? " selected" : "") + '>' + esc(p) + '</option>').join("") + '</select>' +
+      '<button class="small act" data-act="save">save</button></div>' : '') +
+    '</div>';
+}
+
+/* the list's buttons */
+$("list").addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-act]"); if (!b) return;
+  const row = b.closest(".key"); const id = row.dataset.id; const act = b.dataset.act;
+  if (act === "sel") { if (b.checked) selected.add(id); else selected.delete(id); render(); return; }
+  try {
+    if (act === "test") { await testOne(id); }
+    else if (act === "copy" || act === "copysecret") {
+      const j = await api("/api/keys/" + id + "/reveal", { method: "POST", body: "{}" });
+      const v = act === "copy" ? j.value : j.secret;
+      try { await navigator.clipboard.writeText(v); say("copied to the clipboard (" + v.length + " characters)", "ok"); }
+      catch (e) { window.prompt("copy this:", v); }
+    }
+    else if (act === "export") { download({ ids: [id] }); }
+    else if (act === "edit") { if (editing.has(id)) editing.delete(id); else editing.add(id); render(); }
+    else if (act === "save") {
+      const label = row.querySelector('[data-f="label"]').value, provider = row.querySelector('[data-f="provider"]').value;
+      await api("/api/keys/" + id, { method: "POST", body: JSON.stringify({ label, provider }) });
+      editing.delete(id); await load(); say("saved", "ok");
+    }
+    else if (act === "revive") { await api("/api/keys/" + id, { method: "POST", body: JSON.stringify({ revive: true }) }); await load(); }
+    else if (act === "del") {
+      if (!window.confirm("Delete this key from the vault? The note it came from is not touched.")) return;
+      await api("/api/keys/" + id, { method: "DELETE" }); selected.delete(id); await load(); say("deleted", "ok");
+    }
+  } catch (e) { say(e.message, "err"); }
+});
+async function testOne(id) {
+  const row = document.querySelector('.key[data-id="' + id + '"]'); if (row) row.classList.add("busy");
+  say("testing …");
+  try {
+    const j = await api("/api/keys/" + id + "/test", { method: "POST", body: "{}" });
+    const i = KEYS.findIndex(k => k.id === id); if (i >= 0) KEYS[i] = j.key;
+    say(j.key.state + ": " + j.verdict.detail, j.key.state === "works" ? "ok" : (j.key.state === "rejected" ? "err" : ""));
+  } finally { render(); loadLog(); }
+}
+$("provPills").addEventListener("click", ev => { const p = ev.target.closest("[data-p]"); if (p) { provFilter = p.dataset.p; render(); } });
+$("statePills").addEventListener("click", ev => { const p = ev.target.closest("[data-s]"); if (p) { stateFilter = p.dataset.s; render(); } });
+$("selAll").addEventListener("click", () => { for (const k of shown()) selected.add(k.id); render(); });
+$("selNone").addEventListener("click", () => { selected.clear(); render(); });
+$("testSel").addEventListener("click", async () => {
+  const ids = [...selected]; let n = 0;
+  for (const id of ids) { n++; say("testing " + n + " of " + ids.length + " …"); try { await testOne(id); } catch (e) { say(e.message, "err"); } }
+  say("tested " + ids.length + ": " + summary(ids), "ok");
+});
+function summary(ids) { const c = {}; for (const k of KEYS) if (ids.includes(k.id)) c[k.state] = (c[k.state] || 0) + 1; return Object.entries(c).map(([s, n]) => n + " " + s).join(", "); }
+$("exportSel").addEventListener("click", () => download({ ids: [...selected] }));
+$("exportAll").addEventListener("click", () => download({}));
+$("delSel").addEventListener("click", async () => {
+  const ids = [...selected]; if (!ids.length) return;
+  if (!window.confirm("Delete " + ids.length + " key" + (ids.length === 1 ? "" : "s") + " from the vault?")) return;
+  for (const id of ids) { try { await api("/api/keys/" + id, { method: "DELETE" }); } catch (e) { say(e.message, "err"); } }
+  selected.clear(); await load(); say("deleted " + ids.length, "ok");
+});
+async function download(sel) {
+  try {
+    const r = await fetch("/api/export", { method: "POST", headers: H, body: JSON.stringify(sel) });
+    if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || ("HTTP " + r.status)); }
+    const blob = await r.blob();
+    const name = (r.headers.get("Content-Disposition") || "").match(/filename="?([^";]+)/);
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name ? name[1] : "keyring.keys.txt";
+    document.body.appendChild(a); a.click(); a.remove();
+    say("exported " + a.download, "ok"); loadLog();
+  } catch (e) { say(e.message, "err"); }
+}
+
+/* bringing keys in */
+$("fileIn").addEventListener("change", async () => {
+  const files = [...$("fileIn").files]; if (!files.length) return;
+  $("fileName").textContent = files.map(f => f.name + " (" + f.size + " B)").join(", ");
+  const fd = new FormData(); for (const f of files) fd.append("file", f, f.name);
+  say("reading …");
+  try {
+    const r = await fetch("/api/import", { method: "POST", headers: { "X-Keyring-Local": "1" }, body: fd });
+    const j = await r.json(); if (!r.ok || !j.ok) throw new Error(j.error || "import failed");
+    report(j.results); await load();
+  } catch (e) { say(e.message, "err"); }
+  $("fileIn").value = "";
+});
+$("folderBtn").addEventListener("click", async () => {
+  say("reading the folder …");
+  try { const j = await api("/api/import-folder", { method: "POST", body: JSON.stringify({ path: $("folderIn").value }) }); report(j.results); await load(); }
+  catch (e) { say(e.message, "err"); }
+});
+$("pasteIn").addEventListener("input", () => $("pasteBtn").classList.toggle("off", !$("pasteIn").value.trim()));
+$("pasteBtn").addEventListener("click", async () => {
+  try { const j = await api("/api/import", { method: "POST", body: JSON.stringify({ text: $("pasteIn").value, source: "pasted" }) }); report(j.results); $("pasteIn").value = ""; $("pasteBtn").classList.add("off"); await load(); }
+  catch (e) { say(e.message, "err"); }
+});
+function report(results) {
+  const lines = results.map(r => r.source + ": " + (r.error ? r.error : r.found + " found, " + r.added + " added, " + r.duplicates + " already here"));
+  const added = results.reduce((n, r) => n + (r.added || 0), 0);
+  say(lines.join("\n"), added ? "ok" : "");
+}
+async function loadLog() {
+  try { const j = await api("/api/log?n=25"); $("log").textContent = j.lines.length ? j.lines.slice().reverse().map(l => l.at.replace("T", " ") + "  " + l.what + Object.entries(l).filter(([k]) => !["at", "what"].includes(k)).map(([k, v]) => "  " + k + "=" + (Array.isArray(v) ? v.length : v)).join("")).join("\n") : "nothing yet"; }
+  catch (e) { /* the log is a courtesy */ }
+}
+load().catch(e => say(e.message, "err"));
+</script>
+</body>
+</html>

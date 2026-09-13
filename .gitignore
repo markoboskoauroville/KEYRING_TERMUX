@@ -1,0 +1,10 @@
+# the vault is ~/.keyring, outside this repository; nothing key-shaped is ever committed
+keys.json
+*.keys.txt
+log.jsonl
+__pycache__/
+*.pyc
+gates/LAST_RUN.txt
+gates/BUDGETS.json.new
+.hypothesis/
+.mutmut-cache
