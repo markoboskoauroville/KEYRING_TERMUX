@@ -5,14 +5,16 @@ every app and by Claude Code.** Marko, 13.9.2026: *"a central database of all my
 don't need to go to all these text files, and you can also access this database for developing
 applications locally in this Termux environment."*
 
-    keyring                      the server on 127.0.0.1:8842 and the page; q quits it
-    keyring get groq             one value on stdout, for a script:  $(keyring get groq)
-    keyring secret hume          the secret half of a two-part credential
-    keyring list [provider]      every key, masked, with its state; never a value
-    keyring import <file|dir>    keys by shape from notes, or a keyring v1 file
-    keyring export out.txt [p]   the keyring v1 format, every key or one provider's
-    keyring test <provider|all>  the probes, one line per key
-    keyring update               pull the newest version and exit (the u key does it live)
+```
+keyring                      the server on 127.0.0.1:8842 and the page; q quits it
+keyring get groq             one value on stdout, for a script:  $(keyring get groq)
+keyring secret hume          the secret half of a two-part credential
+keyring list [provider]      every key, masked, with its state; never a value
+keyring import <file|dir>    keys by shape from notes, or a keyring v1 file
+keyring export out.txt [p]   the keyring v1 format, every key or one provider's
+keyring test <provider|all>  the probes, one line per key
+keyring update               pull the newest version and exit (the u key does it live)
+```
 
 Install, once: `curl -fsSL https://raw.githubusercontent.com/markoboskoauroville/KEYRING_TERMUX/main/install-termux.sh | bash`,
 then `keyring import ~/storage/downloads/Api` brings every note in.
@@ -62,15 +64,17 @@ never read as empty. `KEYRING_HOME` moves the vault (the tests use throwaway one
 
 ## The files
 
-    app.py            Flask, 127.0.0.1 only, the guard's three checks on every /api call
-    keyring.html      the page, AGY tokens, nothing appears or disappears
-    ring.py           the store, the parser, the keyring v1 format
-    probes.py         the validity and work probes per provider, the classifier, the money detector
-    cli.py            the command's words (get, list, import, export, test, secret, where)
-    keyring           the launcher (run, update, install) and the platform
-    console.py, localguard.py, portpick.py, selfupdate.py   copied from MAHA_TRANSCRIBE_TERMUX_TERMINAL
-    version.py        APP_VERSION, one whole number
-    tests/            the four tests (python3 tests/run_all.py)
-    gates/            the nine gates (python3 gates/run_gates.py), BUDGETS.json, the last record
-    HANDOVER.md       where it runs, what was decided, what is not tested
-    DELIVERY_RECORD.md  the record of the last delivery, gate by gate
+```
+app.py            Flask, 127.0.0.1 only, the guard's three checks on every /api call
+keyring.html      the page, AGY tokens, nothing appears or disappears
+ring.py           the store, the parser, the keyring v1 format
+probes.py         the validity and work probes per provider, the classifier, the money detector
+cli.py            the command's words (get, list, import, export, test, secret, where)
+keyring           the launcher (run, update, install) and the platform
+console.py, localguard.py, portpick.py, selfupdate.py   copied from MAHA_TRANSCRIBE_TERMUX_TERMINAL
+version.py        APP_VERSION, one whole number
+tests/            the four tests (python3 tests/run_all.py)
+gates/            the nine gates (python3 gates/run_gates.py), BUDGETS.json, the last record
+HANDOVER.md       where it runs, what was decided, what is not tested
+DELIVERY_RECORD.md  the record of the last delivery, gate by gate
+```
